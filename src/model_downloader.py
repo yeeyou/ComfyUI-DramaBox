@@ -43,8 +43,14 @@ def get_model_path(name: str, cache_dir: str = None) -> str:
         raise ValueError(f"Unknown model: {name}. Choose from: {list(MODEL_FILES.keys())}")
 
     repo_path = MODEL_FILES[name]
-    logger.info(f"Fetching {name} from {DRAMABOX_REPO}/{repo_path}...")
 
+    # 优先使用本地已下载文件（ModelScope 下载的文件与 HF repo 结构一致）
+    local_candidate = os.path.join(cache_dir, repo_path)
+    if os.path.isfile(local_candidate):
+        logger.info(f"  -> using local file: {local_candidate}")
+        return local_candidate
+
+    logger.info(f"Fetching {name} from {DRAMABOX_REPO}/{repo_path}...")
     local_path = hf_hub_download(
         repo_id=DRAMABOX_REPO,
         filename=repo_path,
@@ -61,8 +67,14 @@ def get_gemma_path(cache_dir: str = None) -> str:
     bitsandbytes quantization and ~halves the Gemma load time.
     """
     cache_dir = cache_dir or DEFAULT_CACHE
-    logger.info(f"Fetching Gemma from {GEMMA_REPO}...")
 
+    # 优先使用本地已下载的 Gemma 目录（ModelScope 下载）
+    gemma_candidate = os.path.join(cache_dir, "gemma-3-12b-it-bnb-4bit")
+    if os.path.isdir(gemma_candidate) and os.path.isfile(os.path.join(gemma_candidate, "config.json")):
+        logger.info(f"  -> using local gemma: {gemma_candidate}")
+        return gemma_candidate
+
+    logger.info(f"Fetching Gemma from {GEMMA_REPO}...")
     local_dir = snapshot_download(
         repo_id=GEMMA_REPO,
         cache_dir=cache_dir,
